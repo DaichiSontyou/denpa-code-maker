@@ -1,0 +1,13 @@
+# 確認用の一時ファイル
+_test_page.html
+_shot_*.html
+*.png
+
+# 将来テストなどを足したとき用
+node_modules/
+
+# OS・エディタ
+Thumbs.db
+.DS_Store
+.vscode/
+.idea/

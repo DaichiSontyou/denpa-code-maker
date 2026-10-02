@@ -1,0 +1,671 @@
+<title>電波人間コードメーカー</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@500;700;800&family=Zen+Kaku+Gothic+New:wght@400;500;700&family=IBM+Plex+Mono:wght@500;600&display=swap">
+<style>
+/* Layout: a two-pane workbench. Controls on the left, the 16-key code readout on the right; one column on phones. */
+:root {
+  --bg: #EDF2F1;
+  --surface: #FFFFFF;
+  --ink: #142427;
+  --muted: #56686B;
+  --line: #D2DEDC;
+  --accent: #0B7684;
+  --accent-ink: #FFFFFF;
+  --accent-soft: #DCEFF1;
+  --key: #F8FBFA;
+  --key-edge: #B4C5C4;
+  --good: #23704A;
+  --good-soft: #DDF1E5;
+  --warn: #8A5300;
+  --warn-soft: #FBEFD9;
+  --bad: #B3261E;
+  --bad-soft: #FBE4E1;
+  --font-display: "M PLUS Rounded 1c", "Hiragino Maru Gothic ProN", "Yu Gothic UI", sans-serif;
+  --font-body: "Zen Kaku Gothic New", "Hiragino Sans", "Yu Gothic UI", "Meiryo", sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "Consolas", monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0E1A1C; --surface: #152628; --ink: #E2EEED; --muted: #98AEAF; --line: #284045;
+    --accent: #49C1CC; --accent-ink: #062327; --accent-soft: #143A3F;
+    --key: #1F3538; --key-edge: #081316;
+    --good: #6BC892; --good-soft: #15372A; --warn: #E6A443; --warn-soft: #3A2C12; --bad: #F2877D; --bad-soft: #3D1A17;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0E1A1C; --surface: #152628; --ink: #E2EEED; --muted: #98AEAF; --line: #284045;
+  --accent: #49C1CC; --accent-ink: #062327; --accent-soft: #143A3F;
+  --key: #1F3538; --key-edge: #081316;
+  --good: #6BC892; --good-soft: #15372A; --warn: #E6A443; --warn-soft: #3A2C12; --bad: #F2877D; --bad-soft: #3D1A17;
+  color-scheme: dark;
+}
+
+body { background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: 15px; line-height: 1.7; }
+.page { max-width: 1120px; margin: 0 auto; padding-inline: 20px; padding-block: 28px 56px; display: grid; gap: 22px; }
+a { color: var(--accent); }
+:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; border-radius: 6px; }
+code, .mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+
+/* masthead */
+.masthead { display: grid; gap: 6px; }
+.brand { display: flex; align-items: flex-end; gap: 10px; }
+.bars { display: inline-flex; align-items: flex-end; gap: 3px; height: 18px; }
+.bars i { display: block; width: 5px; border-radius: 2px; background: var(--accent); }
+.bars i:nth-child(1) { height: 6px; opacity: .45; }
+.bars i:nth-child(2) { height: 10px; opacity: .65; }
+.bars i:nth-child(3) { height: 14px; opacity: .85; }
+.bars i:nth-child(4) { height: 18px; }
+.eyebrow { margin: 0; font-family: var(--font-display); font-weight: 700; font-size: 12.5px; letter-spacing: .08em; color: var(--muted); }
+h1 { margin: 0; font-family: var(--font-display); font-weight: 800; font-size: clamp(28px, 4.2vw, 40px); line-height: 1.25; letter-spacing: .01em; text-wrap: balance; }
+.lead { margin: 0; max-width: 62ch; color: var(--muted); }
+
+/* tabs */
+.tabs { display: flex; flex-wrap: wrap; gap: 6px; padding: 5px; background: var(--surface); border: 1px solid var(--line); border-radius: 999px; width: fit-content; max-width: 100%; }
+.tab { font: inherit; font-family: var(--font-display); font-weight: 700; font-size: 14px; color: var(--muted); background: transparent; border: 0; border-radius: 999px; padding: 7px 16px; cursor: pointer; }
+.tab[aria-selected="true"] { background: var(--accent-soft); color: var(--ink); }
+.tab:hover { color: var(--ink); }
+
+/* panes */
+.workbench { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.08fr); gap: 20px; align-items: start; }
+@media (max-width: 880px) { .workbench { grid-template-columns: minmax(0, 1fr); } }
+.pane { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 20px; display: grid; gap: 18px; min-width: 0; }
+.pane h2 { margin: 0; font-family: var(--font-display); font-weight: 800; font-size: 19px; text-wrap: balance; }
+.pane-head { display: grid; gap: 4px; }
+.pane-head p { margin: 0; color: var(--muted); font-size: 14px; }
+
+.field { display: grid; gap: 6px; }
+.field > label, .legend { font-family: var(--font-display); font-weight: 700; font-size: 14px; }
+.hint { margin: 0; color: var(--muted); font-size: 13px; }
+.hint.err { color: var(--bad); }
+input[type="text"], input[type="number"], select {
+  font: inherit; color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 10px; padding: 9px 12px; width: 100%; max-width: 100%;
+}
+input.code-input { font-family: var(--font-mono); font-size: 18px; letter-spacing: .06em; text-transform: uppercase; }
+.fold { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; font-size: 13.5px; color: var(--muted); }
+.fold strong { font-family: var(--font-mono); font-size: 16px; color: var(--ink); }
+
+/* action list */
+fieldset { border: 0; margin: 0; padding: 0; min-width: 0; }
+.actions { display: grid; gap: 6px; }
+.act { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 10px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 10px; cursor: pointer; }
+.act:hover { border-color: var(--accent); }
+.act.on { border-color: var(--accent); background: var(--accent-soft); }
+.act input { position: absolute; opacity: 0; pointer-events: none; }
+.act:has(input:focus-visible) { outline: 3px solid var(--accent); outline-offset: 2px; }
+.num { font-family: var(--font-mono); font-weight: 600; font-size: 13px; width: 26px; height: 26px; display: grid; place-items: center; border-radius: 7px; background: var(--key); border: 1px solid var(--key-edge); border-bottom-width: 2px; }
+.act-name { font-weight: 500; min-width: 0; }
+.chips { display: flex; gap: 4px; flex-wrap: wrap; justify-content: flex-end; }
+.chip { font-size: 11.5px; letter-spacing: .02em; padding: 1px 8px; border-radius: 999px; border: 1px solid var(--line); color: var(--muted); white-space: nowrap; }
+.chip.shared { color: var(--good); border-color: currentColor; }
+.chip.danger { color: var(--bad); border-color: currentColor; }
+.desc { margin: 0; font-size: 14px; }
+
+.row { display: flex; flex-wrap: wrap; gap: 12px; align-items: end; }
+.row .field { flex: 1 1 160px; }
+.check { display: flex; gap: 8px; align-items: center; font-size: 14px; cursor: pointer; }
+.check input { width: 18px; height: 18px; accent-color: var(--accent); }
+
+/* required-version bar */
+.verbar { padding: 14px 16px; gap: 8px; }
+.verbar-row { display: flex; flex-wrap: wrap; gap: 12px 16px; align-items: end; }
+.verbar-mode { flex: 1 1 240px; max-width: 360px; }
+.verfields { display: flex; flex-wrap: wrap; gap: 10px; align-items: end; }
+.verfields .field { width: 8.5em; }
+.verfields input { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.vnote { display: block; font-size: 12px; color: var(--muted); letter-spacing: 0; white-space: nowrap; }
+/* code readout: 3DS software-keyboard keys */
+.readout { display: grid; gap: 12px; }
+.keys { display: flex; flex-wrap: wrap; gap: 10px 14px; }
+.kgroup { display: inline-flex; gap: 5px; }
+.key {
+  font-family: var(--font-mono); font-weight: 600; font-size: clamp(20px, 3vw, 27px); line-height: 1;
+  width: 1.55em; height: 1.85em; display: grid; place-items: center;
+  background: var(--key); color: var(--ink); border: 1px solid var(--key-edge); border-bottom-width: 4px; border-radius: 8px;
+}
+.readout-meta { margin: 0; font-size: 13.5px; color: var(--muted); }
+.readout-meta .mono { color: var(--ink); }
+.btns { display: flex; flex-wrap: wrap; gap: 8px; }
+.btn { font: inherit; font-family: var(--font-display); font-weight: 700; font-size: 14px; border-radius: 10px; padding: 8px 16px; cursor: pointer; border: 1px solid var(--accent); background: var(--accent); color: var(--accent-ink); }
+.btn.ghost { background: transparent; color: var(--accent); }
+.btn.small { padding: 3px 10px; font-size: 12.5px; }
+
+/* the 10 bytes before scrambling */
+.bytes { display: grid; grid-template-columns: repeat(10, minmax(0, 1fr)); gap: 4px; }
+@media (max-width: 520px) { .bytes { grid-template-columns: repeat(5, minmax(0, 1fr)); } }
+.byte { display: grid; gap: 1px; text-align: center; padding: 5px 2px; border-radius: 7px; background: var(--bg); }
+.byte span { font-size: 10.5px; color: var(--muted); letter-spacing: .02em; }
+.byte b { font-family: var(--font-mono); font-weight: 600; font-size: 13px; }
+.byte.pay { background: var(--accent-soft); }
+.cap { margin: 0; font-size: 12.5px; color: var(--muted); }
+
+.steps { margin: 0; padding-left: 1.4em; display: grid; gap: 4px; font-size: 14px; }
+.callout { margin: 0; padding: 10px 12px; border-radius: 10px; font-size: 13.5px; background: var(--bg); }
+.callout b { font-family: var(--font-display); }
+.callout.warn { background: var(--warn-soft); }
+.callout.warn b { color: var(--warn); }
+.callout.danger { background: var(--bad-soft); }
+.callout.danger b { color: var(--bad); }
+.callout.good { background: var(--good-soft); }
+.callout.good b { color: var(--good); }
+
+/* tables */
+.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 12px; }
+table { width: 100%; border-collapse: collapse; font-size: 14px; }
+th { text-align: left; font-weight: 700; font-size: 12.5px; color: var(--muted); background: var(--bg); padding: 8px 12px; white-space: nowrap; }
+td { padding: 7px 12px; border-top: 1px solid var(--line); vertical-align: middle; }
+td.n { font-family: var(--font-mono); font-variant-numeric: tabular-nums; color: var(--muted); }
+td .mono { font-size: 14.5px; letter-spacing: .04em; white-space: nowrap; }
+td.code-cell { white-space: nowrap; }
+.dim { color: var(--muted); }
+
+/* decode result */
+dl.result { margin: 0; display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 6px 16px; font-size: 14px; }
+dl.result dt { color: var(--muted); }
+dl.result dd { margin: 0; min-width: 0; }
+.status { display: inline-flex; align-items: center; gap: 6px; font-family: var(--font-display); font-weight: 700; padding: 2px 10px; border-radius: 999px; font-size: 13px; }
+.status.ok { background: var(--good-soft); color: var(--good); }
+.status.ng { background: var(--bad-soft); color: var(--bad); }
+.examples { display: flex; flex-wrap: wrap; gap: 6px; }
+.alphabet { display: flex; flex-wrap: wrap; gap: 4px; }
+.alphabet .key { font-size: 14px; border-bottom-width: 2px; border-radius: 6px; }
+
+footer { font-size: 13px; color: var(--muted); max-width: 72ch; }
+footer p { margin: 0; }
+
+@media (prefers-reduced-motion: no-preference) {
+  .btn, .tab, .act { transition: background-color .15s, border-color .15s, color .15s; }
+}
+</style>
+
+<main class="page">
+  <header class="masthead">
+    <div class="brand">
+      <span class="bars" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+      <p class="eyebrow">電波人間のRPG FREE!・3DS版</p>
+    </div>
+    <h1>電波人間コードメーカー</h1>
+    <p class="lead">サポートだけが発行できた不具合修正コードと、共通キャンペーンコードを計算します。ゲーム側の照合はサポート番号から作る16bitの値だけなので、番号を入れれば本人用のコードも作れます。作れるのはゲーム内の表にある効果だけで、任意のフラグやアイテムを指定するコードは作れません。</p>
+  </header>
+
+  <nav class="tabs" role="tablist" aria-label="ツールの切り替え">
+    <button class="tab" role="tab" id="tab-fix" aria-controls="panel-fix" aria-selected="true">不具合修正コード</button>
+    <button class="tab" role="tab" id="tab-common" aria-controls="panel-common" aria-selected="false">共通コード50件</button>
+    <button class="tab" role="tab" id="tab-decode" aria-controls="panel-decode" aria-selected="false">コードを調べる</button>
+  </nav>
+
+  <!-- required game version stamped into the generated codes -->
+  <section class="pane verbar" id="verbar" aria-label="コードに刻む必要バージョン">
+    <div class="verbar-row">
+      <div class="field verbar-mode">
+        <label for="ver-mode">コードに刻む必要バージョン</label>
+        <select id="ver-mode">
+          <option value="any">どの版でも使える(0.0.0)</option>
+          <option value="final">最終版 1.17.0 以上</option>
+          <option value="custom">版を指定する</option>
+        </select>
+      </div>
+      <div class="verfields" id="ver-fields" hidden>
+        <div class="field"><label for="ver-major">主(0〜63)</label><input type="number" id="ver-major" min="0" max="63" step="1" inputmode="numeric"></div>
+        <div class="field"><label for="ver-minor">副(0〜1023)</label><input type="number" id="ver-minor" min="0" max="1023" step="1" inputmode="numeric"></div>
+        <div class="field"><label for="ver-build">build(0〜16383)</label><input type="number" id="ver-build" min="0" max="16383" step="1" inputmode="numeric"></div>
+      </div>
+    </div>
+    <p class="hint" id="ver-hint"></p>
+    <p class="callout warn" id="ver-warn" hidden></p>
+    <p class="cap">版の判定を通ったあとは、種別と本体(番号・操作・カウンタ)だけが使われます。版だけが違う同じコードは、使用済みの管理では同じコードとして扱われます。</p>
+  </section>
+
+  <!-- support-only fix codes -->
+  <section class="workbench" role="tabpanel" id="panel-fix" aria-labelledby="tab-fix">
+    <div class="pane">
+      <div class="pane-head">
+        <h2>サポート専用コードを作る</h2>
+        <p>運営ミスや不具合の救済用に、サポート窓口が発行していたコードです。</p>
+      </div>
+
+      <div class="field">
+        <label for="support">お客様サポート番号</label>
+        <input type="text" id="support" class="code-input" placeholder="例: 0123-4567-89AB-CDEF" autocomplete="off" spellcheck="false" maxlength="19" inputmode="text">
+        <p class="hint" id="support-hint">「せってい」の「サポート番号」に出る16けたです。未発行なら空欄のままで大丈夫です(0として計算)。</p>
+        <div class="fold" id="fold-line"></div>
+      </div>
+
+      <fieldset>
+        <legend class="legend">アクション</legend>
+        <div class="actions" id="actions"></div>
+      </fieldset>
+      <p class="desc" id="action-desc"></p>
+
+      <div class="row">
+        <div class="field">
+          <label for="counter">使用回数(カウンタ)</label>
+          <select id="counter"></select>
+        </div>
+        <label class="check" for="seq"><input type="checkbox" id="seq"> 上限まで一覧で出す</label>
+      </div>
+      <p class="hint" id="counter-hint"></p>
+    </div>
+
+    <div class="pane">
+      <div class="readout">
+        <h2>コード</h2>
+        <div class="keys" id="fix-keys" role="img"></div>
+        <p class="readout-meta" id="fix-meta"></p>
+        <div class="btns"><button class="btn" id="fix-copy" type="button">コピー</button></div>
+      </div>
+
+      <div class="table-wrap" id="seq-wrap" hidden>
+        <table>
+          <thead><tr><th>カウンタ</th><th>コード</th><th></th></tr></thead>
+          <tbody id="seq-body"></tbody>
+        </table>
+      </div>
+
+      <div class="field">
+        <span class="legend">入力のしかた</span>
+        <ol class="steps">
+          <li>タイトル画面で「せってい」を開く</li>
+          <li>L・R・Xを押したまま「コード入力」を選ぶ</li>
+          <li>「サポートより発行されたコードの入力を開始しますか？」で「はい」を選ぶ</li>
+          <li>上の16文字を入力する</li>
+        </ol>
+      </div>
+
+      <p class="callout danger" id="danger-note" hidden><b>注意</b> このアクションは更新データを削除して再起動します。あとで更新データを入れ直してください。</p>
+      <p class="callout warn"><b>受け付けない状態</b> セーブが「壊れている可能性」などと判定されている間と、中断データがある間は、アクション1と6以外は使えません。</p>
+
+      <div class="field">
+        <span class="legend">混ぜる前の10バイト</span>
+        <div class="bytes" id="fix-bytes"></div>
+        <p class="cap">版=必要バージョン(上の設定。初期値は0)、検査=本体5バイトのSHA-256先頭1バイト。この10バイトを可逆に混ぜ合わせて32文字表で16文字にします。</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- common campaign codes -->
+  <section class="pane" role="tabpanel" id="panel-common" aria-labelledby="tab-common" hidden>
+    <div class="pane-head">
+      <h2>共通キャンペーンコード</h2>
+      <p>通常の「せってい › コード入力」で使えるのは最終版ではこの50件です。サポート番号に関係なく、誰でも同じコードが使えます。同じグループのコードは1つのセーブで1回までです。</p>
+    </div>
+    <p class="callout good"><strong>No.49 <span class="mono">A4J8 Y13M L7TA WWE1</span></strong> は2023年3月30日に配られたオフラインチェックイン用の修正コードです。ジュエル販売所とWi-Fiコロシアムを終了扱いにして、チェックインを通信なしの処理に切り替えます。公式コードはVer.1.17以降で使えます。効果そのものはゲーム内の表(Ver.1.17以降のデータ)に入っていて、コードはその49番を指す番号です。50件のうちフラグを立てるのはこれだけで、何度入力しても結果は同じです。</p>
+    <div class="field">
+      <label for="filter">さがす</label>
+      <input type="text" id="filter" placeholder="キャンペーン名・アイテム名・番号" autocomplete="off">
+    </div>
+    <label class="check" for="match-official"><input type="checkbox" id="match-official"> 公式コードがある行は公式の版にそろえる(公式と同じ文字列になります)</label>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>No.</th><th>グループ</th><th>キャンペーン</th><th>もらえるもの</th><th>生成コード</th><th>公式コード</th></tr></thead>
+        <tbody id="common-body"></tbody>
+      </table>
+    </div>
+    <p class="cap">生成コードの必要バージョンは上の設定で決まります(初期値は0.0.0で、どの版でも通ります)。公式コードは配布されていたもので、作られた時点のゲームの版が刻まれているため、文字列が違って見えます。復号すると同じレコードになります。</p>
+  </section>
+
+  <!-- decoder -->
+  <section class="workbench" role="tabpanel" id="panel-decode" aria-labelledby="tab-decode" hidden>
+    <div class="pane">
+      <div class="pane-head">
+        <h2>コードを調べる</h2>
+        <p>16文字のコードを復号して、種類と中身を表示します。</p>
+      </div>
+      <div class="field">
+        <label for="decode-input">コード</label>
+        <input type="text" id="decode-input" class="code-input" value="X2B87Y0PBQBA139L" autocomplete="off" spellcheck="false" maxlength="24">
+        <p class="hint">入っているのは公式コードの例(Miiverseフォロワー1万5千人突破記念)です。</p>
+      </div>
+      <div class="field">
+        <span class="legend">公式コードの例</span>
+        <div class="examples" id="examples"></div>
+      </div>
+      <div class="field">
+        <label for="decode-support">照合するサポート番号(任意)</label>
+        <input type="text" id="decode-support" class="code-input" placeholder="0123-4567-89AB-CDEF" autocomplete="off" spellcheck="false" maxlength="19">
+      </div>
+      <div class="field">
+        <span class="legend">使われる32文字</span>
+        <div class="alphabet" id="alphabet"></div>
+        <p class="cap">I・O・S・Zは使われません。0と1は数字です。</p>
+      </div>
+    </div>
+    <div class="pane">
+      <h2>結果</h2>
+      <dl class="result" id="decode-result"></dl>
+      <div class="field">
+        <span class="legend">混ぜる前の10バイト</span>
+        <div class="bytes" id="decode-bytes"></div>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <p>非公式ツールです。3DS版の更新データ(v17.20.0)の実行ファイルを調べて計算しています。公式コード29件の復号で計算式を確かめていますが、生成したコードの実機での動作は未確認です。</p>
+  </footer>
+</main>
+
+<script src="denpa-core.js"></script>
+<script>
+(function () {
+  'use strict';
+  var D = window.DenpaCode;
+  var $ = function (id) { return document.getElementById(id); };
+  var hex = function (n, w) { return n.toString(16).toUpperCase().padStart(w, '0'); };
+  var esc = function (s) { return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); };
+
+  function store(k, v) { try { if (v === undefined) return localStorage.getItem(k); localStorage.setItem(k, v); } catch (e) { return null; } return null; }
+
+  /* ---------- shared rendering ---------- */
+  function renderKeys(el, code) {
+    var html = '';
+    for (var g = 0; g < 4; g++) {
+      html += '<span class="kgroup">';
+      for (var i = 0; i < 4; i++) html += '<span class="key">' + code.charAt(g * 4 + i) + '</span>';
+      html += '</span>';
+    }
+    el.innerHTML = html;
+    el.setAttribute('aria-label', 'コード ' + code.match(/.{4}/g).join(' '));
+  }
+  var BYTE_LABELS = {
+    0: ['版', '版', '版', '検査', '種別', '番号', '番号', '番号', '番号', '予備'],
+    2: ['版', '版', '版', '検査', '種別', 'F下位', '操作', '回数', '予備', 'F上位'],
+    other: ['版', '版', '版', '検査', '種別', '本体', '本体', '本体', '本体', '本体']
+  };
+  function renderBytes(el, plain, type) {
+    var labels = BYTE_LABELS[type] || BYTE_LABELS.other;
+    el.innerHTML = plain.map(function (b, i) {
+      return '<div class="byte' + (i >= 5 ? ' pay' : '') + '"><span>' + labels[i] + '</span><b>' + hex(b, 2) + '</b></div>';
+    }).join('');
+  }
+  function copyText(text, btn, label) {
+    var done = function (msg) { btn.textContent = msg; setTimeout(function () { btn.textContent = label; }, 1600); };
+    try {
+      navigator.clipboard.writeText(text).then(function () { done('コピーしました'); }, function () { done('コピーできませんでした'); });
+    } catch (e) { done('コピーできませんでした'); }
+  }
+  function formatSupportInput(input) {
+    var raw = input.value.toUpperCase();
+    var bad = /[^0-9A-F\s\-]/.test(raw);
+    var digits = raw.replace(/[^0-9A-F]/g, '').slice(0, 16);
+    var formatted = (digits.match(/.{1,4}/g) || []).join('-');
+    if (formatted !== input.value) input.value = formatted;
+    return bad;
+  }
+
+  /* ---------- tabs ---------- */
+  var tabs = ['fix', 'common', 'decode'];
+  function showTab(name) {
+    tabs.forEach(function (t) {
+      var on = t === name;
+      $('tab-' + t).setAttribute('aria-selected', on ? 'true' : 'false');
+      $('tab-' + t).tabIndex = on ? 0 : -1;
+      $('panel-' + t).hidden = !on;
+    });
+    $('verbar').hidden = name === 'decode';
+    store('denpa-tab', name);
+  }
+  tabs.forEach(function (t, i) {
+    var el = $('tab-' + t);
+    el.addEventListener('click', function () { showTab(t); });
+    el.addEventListener('keydown', function (e) {
+      if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
+      var next = tabs[(i + (e.key === 'ArrowRight' ? 1 : tabs.length - 1)) % tabs.length];
+      showTab(next); $('tab-' + next).focus();
+    });
+  });
+  var hash = (location.hash || '').slice(1);
+  showTab(tabs.indexOf(hash) >= 0 ? hash : (tabs.indexOf(store('denpa-tab')) >= 0 ? store('denpa-tab') : 'fix'));
+
+  /* ---------- required version stamped into generated codes ---------- */
+  var verState = { mode: 'any', major: 1, minor: 17, build: 0, official: false };
+  (function restoreVersion() {
+    try {
+      var sv = JSON.parse(store('denpa-ver') || 'null');
+      if (sv && ['any', 'final', 'custom'].indexOf(sv.mode) >= 0) {
+        var cv = D.clampVersion(sv);
+        verState.mode = sv.mode; verState.major = cv.major; verState.minor = cv.minor; verState.build = cv.build;
+        verState.official = !!sv.official;
+      }
+    } catch (e) { /* storage unavailable or corrupted: keep the defaults */ }
+  })();
+  function currentVersion() {
+    if (verState.mode === 'any') return { major: 0, minor: 0, build: 0 };
+    if (verState.mode === 'final') return { major: D.FINAL_VERSION.major, minor: D.FINAL_VERSION.minor, build: D.FINAL_VERSION.build };
+    return D.clampVersion(verState);
+  }
+  function versionFor(row) { return verState.official && row && row.officialVersion ? row.officialVersion : currentVersion(); }
+  function renderVersionBar() {
+    var fin = D.formatVersion(D.FINAL_VERSION), v = currentVersion(), ok = D.versionAccepted(v);
+    $('ver-mode').value = verState.mode;
+    $('ver-fields').hidden = verState.mode !== 'custom';
+    ['major', 'minor', 'build'].forEach(function (k) {
+      var el = $('ver-' + k);
+      if (document.activeElement !== el) el.value = String(verState[k]);
+    });
+    var hint = verState.mode === 'any'
+      ? '0.0.0 は「必要バージョンなし」です。どの版のゲームでも版の判定を通ります。公式コードが刻んでいるのは、そのコードが作られた時点のゲームの版です。'
+      : verState.mode === 'final'
+        ? fin + ' 以上のゲームで使えます。それより古いソフトでは「ソフトのバージョンが古い為 入力されたコードを受け付けられません。 チェックインをして、更新してください。」と出ます。'
+        : (ok ? D.formatVersion(v) + ' 以上のゲームで使えます。最終版(' + fin + ')でも版の判定を通ります。' : '');
+    $('ver-hint').textContent = hint;
+    $('ver-hint').hidden = hint === '';
+    $('ver-warn').hidden = ok;
+    if (!ok) $('ver-warn').innerHTML = '<b>最終版では使えません</b> ' + esc(D.formatVersion(v)) + ' は最終版(' + fin + ')より新しい版です。最終版のゲームでは「ソフトのバージョンが古い為 入力されたコードを受け付けられません。」と出て受け付けられません。この版に更新されたソフトを用意する場合だけ使ってください。';
+  }
+  function onVersionChange() {
+    store('denpa-ver', JSON.stringify(verState));
+    renderVersionBar();
+    renderFix();
+    renderCommon();
+  }
+  $('ver-mode').addEventListener('change', function () { verState.mode = this.value; onVersionChange(); });
+  ['major', 'minor', 'build'].forEach(function (k) {
+    var el = $('ver-' + k);
+    el.addEventListener('input', function () {
+      var n = parseInt(el.value, 10);
+      verState[k] = isNaN(n) ? 0 : Math.max(0, Math.min(D.VERSION_MAX[k], n));
+      onVersionChange();
+    });
+    el.addEventListener('change', function () { el.value = String(verState[k]); });
+  });
+  $('match-official').checked = verState.official;
+  $('match-official').addEventListener('change', function () { verState.official = this.checked; onVersionChange(); });
+  renderVersionBar();
+
+  /* ---------- support-only fix codes ---------- */
+  var state = { action: 8 };
+  var actionsEl = $('actions');
+  actionsEl.innerHTML = D.ACTIONS.map(function (a) {
+    var chips = [];
+    chips.push(a.bound ? '<span class="chip">本人用</span>' : '<span class="chip shared">全員共通</span>');
+    if (a.limit && a.counter === 'count') chips.push('<span class="chip">上限' + a.limit + '回</span>');
+    if (a.danger) chips.push('<span class="chip danger">再起動</span>');
+    return '<label class="act" for="act-' + a.n + '"><input type="radio" name="action" id="act-' + a.n + '" value="' + a.n + '">' +
+      '<span class="num">' + a.n + '</span><span class="act-name">' + esc(a.name) + '</span><span class="chips">' + chips.join('') + '</span></label>';
+  }).join('');
+
+  var supportInput = $('support'), counterSel = $('counter'), seqBox = $('seq');
+
+  function currentAction() { return D.ACTIONS.filter(function (a) { return a.n === state.action; })[0]; }
+
+  function fillCounter(a) {
+    var prev = parseInt(counterSel.value || '0', 10);
+    var max = a.counter === 'count' ? a.limit : (a.counter === 'nibble' ? 16 : 1);
+    var opts = '';
+    for (var i = 0; i < max; i++) opts += '<option value="' + i + '">' + i + (i === 0 && max > 1 ? '(初めて)' : '') + '</option>';
+    counterSel.innerHTML = opts;
+    counterSel.value = String(Math.min(prev, max - 1));
+    var fixed = a.counter === 'none' || a.counter === 'zero';
+    counterSel.disabled = fixed;
+    seqBox.disabled = fixed;
+    if (fixed) seqBox.checked = false;
+    $('counter-hint').textContent =
+      a.counter === 'none' ? '回数の管理はありません。同じコードを何度でも使えます。' :
+      a.counter === 'zero' ? '回数の管理はありません(カウンタは0で固定)。' :
+      a.counter === 'count' ? '成功するたびに1つ進みます(上限' + a.limit + '回)。どこまで使ったか分からなければ0から順に試してください。外れても「取扱いできません」と出るだけです。' :
+      '成功するたびに1つ進みます。初めてなら0です。';
+  }
+
+  function renderFix() {
+    var a = currentAction();
+    Array.prototype.forEach.call(actionsEl.querySelectorAll('.act'), function (el) {
+      var on = el.querySelector('input').value === String(a.n);
+      el.classList.toggle('on', on);
+      el.querySelector('input').checked = on;
+    });
+    $('action-desc').textContent = a.desc;
+    $('danger-note').hidden = !a.danger;
+
+    var bad = formatSupportInput(supportInput);
+    var sp = D.parseSupport(supportInput.value);
+    var hint = $('support-hint');
+    hint.classList.toggle('err', bad);
+    hint.textContent = bad ? '使えるのは0〜9とA〜Fだけです(Oは数字の0、Iは数字の1かもしれません)。'
+      : '「せってい」の「サポート番号」に出る16けたです。未発行なら空欄のままで大丈夫です(0として計算)。';
+
+    var fold = a.bound ? sp.fold : 0;
+    var g = sp.groups.map(function (x) { return hex(x, 4); });
+    $('fold-line').innerHTML = a.bound
+      ? '<span>照合値 F</span><strong>' + hex(fold, 4) + '</strong><span class="mono">= ' + g.join(' + ') + ' の下位4けた</span>' + (sp.empty ? '<span>(未入力: 未発行として0で計算)</span>' : '')
+      : '<span>このアクションはサポート番号を使いません(F = 0000)</span>';
+
+    var counter = (a.counter === 'none' || a.counter === 'zero') ? 0 : parseInt(counterSel.value || '0', 10);
+    var ver = currentVersion();
+    var res = D.actionCode(a.n, fold, counter, ver);
+    renderKeys($('fix-keys'), res.code);
+    $('fix-meta').innerHTML = 'アクション<span class="mono">' + a.n + '</span>・カウンタ<span class="mono">' + counter + '</span>・照合値<span class="mono">' + hex(fold, 4) + '</span>・必要バージョン<span class="mono">' + D.formatVersion(ver) + '</span>';
+    renderBytes($('fix-bytes'), res.plain, 2);
+    state.code = res.code;
+
+    var seqOn = seqBox.checked && !seqBox.disabled;
+    $('seq-wrap').hidden = !seqOn;
+    if (seqOn) {
+      var max = a.counter === 'count' ? a.limit : 16, rows = '';
+      for (var i = 0; i < max; i++) {
+        var c = D.actionCode(a.n, fold, i, ver).code;
+        rows += '<tr><td class="n">' + i + '</td><td class="code-cell"><span class="mono">' + c.match(/.{4}/g).join(' ') + '</span></td>' +
+          '<td><button class="btn ghost small" type="button" data-copy="' + c + '">コピー</button></td></tr>';
+      }
+      $('seq-body').innerHTML = rows;
+    }
+    store('denpa-support', supportInput.value);
+    store('denpa-action', String(a.n));
+  }
+
+  actionsEl.addEventListener('change', function (e) {
+    if (e.target.name !== 'action') return;
+    state.action = parseInt(e.target.value, 10);
+    fillCounter(currentAction());
+    renderFix();
+  });
+  supportInput.addEventListener('input', renderFix);
+  counterSel.addEventListener('change', renderFix);
+  seqBox.addEventListener('change', renderFix);
+  $('fix-copy').addEventListener('click', function () { copyText(state.code, this, 'コピー'); });
+  $('seq-body').addEventListener('click', function (e) {
+    var b = e.target.closest('[data-copy]');
+    if (b) copyText(b.getAttribute('data-copy'), b, 'コピー');
+  });
+
+  var savedSupport = store('denpa-support'), savedAction = parseInt(store('denpa-action') || '', 10);
+  if (savedSupport) supportInput.value = savedSupport;
+  if (savedAction >= 1 && savedAction <= 12) state.action = savedAction;
+  fillCounter(currentAction());
+  renderFix();
+
+  /* ---------- common campaign codes ---------- */
+  function applyFilter() {
+    var q = $('filter').value.trim();
+    Array.prototype.forEach.call($('common-body').rows, function (tr) {
+      tr.hidden = q !== '' && tr.getAttribute('data-text').indexOf(q) < 0;
+    });
+  }
+  function renderCommon() {
+    $('common-body').innerHTML = D.LOCAL.map(function (r) {
+      var ver = versionFor(r);
+      var code = D.commonCode(r.no, ver).code;
+      var text = [r.no, r.campaign, r.reward, r.group].join(' ');
+      return '<tr data-text="' + esc(text) + '"><td class="n">' + r.no + '</td><td class="n">' + (r.group < 0 ? '-' : r.group) + '</td>' +
+        '<td>' + (r.campaign ? esc(r.campaign) : '<span class="dim">不明</span>') + '</td><td>' + esc(r.reward) + '</td>' +
+        '<td class="code-cell"><span class="mono">' + code.match(/.{4}/g).join(' ') + '</span> <button class="btn ghost small" type="button" data-copy="' + code + '">コピー</button>' +
+        '<span class="vnote">必要版 ' + D.formatVersion(ver) + '</span></td>' +
+        '<td class="code-cell">' + (r.official
+          ? '<span class="mono">' + r.official.match(/.{4}/g).join(' ') + '</span><span class="vnote">必要版 ' + D.formatVersion(r.officialVersion) + '</span>'
+          : '<span class="dim">-</span>') + '</td></tr>';
+    }).join('');
+    applyFilter();
+  }
+  $('common-body').addEventListener('click', function (e) {
+    var b = e.target.closest('[data-copy]');
+    if (b) copyText(b.getAttribute('data-copy'), b, 'コピー');
+  });
+  $('filter').addEventListener('input', applyFilter);
+  renderCommon();
+
+  /* ---------- decoder ---------- */
+  $('alphabet').innerHTML = D.ALPHABET.split('').map(function (c) { return '<span class="key">' + c + '</span>'; }).join('');
+  var seenCampaign = {};
+  $('examples').innerHTML = D.LOCAL.filter(function (r) {
+    if (!r.official || seenCampaign[r.campaign]) return false;
+    return (seenCampaign[r.campaign] = true);
+  }).map(function (r) {
+    return '<button class="btn ghost small" type="button" data-code="' + r.official + '">' + esc(r.campaign) + '</button>';
+  }).join('');
+  $('examples').addEventListener('click', function (e) {
+    var b = e.target.closest('[data-code]');
+    if (!b) return;
+    $('decode-input').value = b.getAttribute('data-code');
+    renderDecode();
+  });
+
+  var TYPE_NAMES = ['共通コード', '個人用コード', 'サポート専用コード', '無効な種別'];
+  function row(dt, dd) { return '<dt>' + dt + '</dt><dd>' + dd + '</dd>'; }
+  function renderDecode() {
+    var out = $('decode-result'), bytesEl = $('decode-bytes');
+    var info = D.decode($('decode-input').value);
+    if (info.error) {
+      out.innerHTML = row('判定', '<span class="status ng">読めません</span>') +
+        row('理由', info.error === 'length' ? '16文字ではありません(いま' + info.length + '文字)。' : '「' + esc(info.ch) + '」は使われない文字です。左の32文字だけが使えます。');
+      bytesEl.innerHTML = '';
+      return;
+    }
+    var html = row('判定', info.checksumOk ? '<span class="status ok">チェックサム一致</span>' : '<span class="status ng">チェックサム不一致</span>');
+    if (!info.checksumOk) html += row('理由', '打ち間違いの可能性があります。ゲームでは「入力されたコードが間違っています」になります。');
+    html += row('種類', TYPE_NAMES[info.type] + '(種別' + info.type + ')');
+    var vtext = D.formatVersion(info.version);
+    html += row('必要バージョン', '<span class="mono">' + vtext + '</span>' + (vtext === '0.0.0' ? ' <span class="dim">(どの版でも通る)</span>' : ''));
+    if (info.checksumOk) {
+      html += row('版の判定', D.versionAccepted(info.version)
+        ? '<span class="status ok">最終版(' + D.formatVersion(D.FINAL_VERSION) + ')で通ります</span>'
+        : '<span class="status ng">最終版(' + D.formatVersion(D.FINAL_VERSION) + ')では受け付けられません</span> 「ソフトのバージョンが古い為 入力されたコードを受け付けられません。」と出ます。');
+    }
+    if (info.type === 0) {
+      var r = D.LOCAL[info.recordIndex];
+      html += row('レコード', r ? 'No.' + r.no + '・' + esc(r.campaign || '不明') + '・' + esc(r.reward) : '<span class="status ng">No.' + info.recordIndex + ' は表にありません</span>');
+      if (r && r.no === 49) html += row('メモ', '2023年3月のサービス終了後にチェックインできなくなったセーブ向けの修正コードです。フラグ676をONにします。');
+      if (info.byte9 !== 0) html += row('注意', '予備バイトが0ではないので受け付けられません。');
+    } else if (info.type === 2) {
+      var a = D.ACTIONS.filter(function (x) { return x.n === info.action; })[0];
+      html += row('アクション', a ? a.n + '・' + esc(a.name) : '<span class="status ng">' + info.action + ' は存在しません</span>');
+      html += row('カウンタ', '<span class="mono">' + info.counter + '</span>');
+      html += row('照合値 F', '<span class="mono">' + hex(info.fold, 4) + '</span>');
+      var sv = $('decode-support').value.trim();
+      if (sv) {
+        var sp = D.parseSupport(sv);
+        if (sp.error) html += row('照合', '<span class="status ng">サポート番号の形式が違います</span>');
+        else if (a && !a.bound) html += row('照合', 'このアクションはサポート番号を使いません。');
+        else html += row('照合', sp.fold === info.fold ? '<span class="status ok">このサポート番号用です</span>' : '<span class="status ng">別のサポート番号用です(F=' + hex(sp.fold, 4) + ')</span>');
+      }
+    } else if (info.type === 1) {
+      html += row('メモ', '最終版では「このコードは有効期限が切れています。」になります。');
+    }
+    out.innerHTML = html;
+    renderBytes(bytesEl, info.plain, info.type);
+  }
+  $('decode-input').addEventListener('input', renderDecode);
+  $('decode-support').addEventListener('input', function () { formatSupportInput(this); renderDecode(); });
+  renderDecode();
+})();
+</script>
